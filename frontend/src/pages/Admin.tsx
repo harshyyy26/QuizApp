@@ -216,27 +216,27 @@ const Admin = () => {
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-  if (!selectedQuizForView) return;
-  const confirmDelete = confirm("Are you sure you want to delete this question?");
-  if (!confirmDelete) return;
+    if (!selectedQuizForView) return;
+    const confirmDelete = confirm("Are you sure you want to delete this question?");
+    if (!confirmDelete) return;
 
-  try {
-    await quizService.deleteQuestion(selectedQuizForView.id, questionId);
-    toast({
-      title: 'Success',
-      description: 'Question deleted successfully!',
-    });
+    try {
+      await quizService.deleteQuestion(selectedQuizForView.id, questionId);
+      toast({
+        title: 'Success',
+        description: 'Question deleted successfully!',
+      });
 
-    const updatedQuiz = await quizService.getQuizById(selectedQuizForView.id);
-    setSelectedQuizForView(updatedQuiz);
-  } catch (error: any) {
-    toast({
-      title: 'Error',
-      description: error.response?.data?.message || 'Failed to delete question',
-      variant: 'destructive',
-    });
-  }
-};
+      const updatedQuiz = await quizService.getQuizById(selectedQuizForView.id);
+      setSelectedQuizForView(updatedQuiz);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to delete question',
+        variant: 'destructive',
+      });
+    }
+  };
 
 
   if (loading) {
@@ -311,8 +311,7 @@ const Admin = () => {
                     value={selectedQuiz?.toString() || ''}
                     onValueChange={(value) => setSelectedQuiz(value)}
                   >
-
-                    <SelectTrigger>
+                    <SelectTrigger id="quiz-select"> {/* ✅ add id here */}
                       <SelectValue placeholder="Choose a quiz" />
                     </SelectTrigger>
                     <SelectContent>
@@ -322,9 +321,9 @@ const Admin = () => {
                         </SelectItem>
                       ))}
                     </SelectContent>
-
                   </Select>
                 </div>
+
 
                 <div>
                   <Label htmlFor="question">Question</Label>
@@ -379,9 +378,11 @@ const Admin = () => {
                   <Label htmlFor="correct-answer">Correct Answer</Label>
                   <Select
                     value={newQuestion.correctAnswer.toString()}
-                    onValueChange={(value) => setNewQuestion(prev => ({ ...prev, correctAnswer: Number(value) }))}
+                    onValueChange={(value) =>
+                      setNewQuestion((prev) => ({ ...prev, correctAnswer: Number(value) }))
+                    }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="correct-answer"> {/* ✅ add id here */}
                       <SelectValue placeholder="Select correct answer" />
                     </SelectTrigger>
                     <SelectContent>
@@ -392,6 +393,7 @@ const Admin = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
 
                 <Button type="submit" disabled={!selectedQuiz}>
                   Add Question
@@ -502,120 +504,171 @@ const Admin = () => {
         </TabsContent>
       </Tabs>
       {selectedQuizForView && (
-        <Dialog open={viewingQuestions} onOpenChange={setViewingQuestions}>
-          <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>Questions for "{selectedQuizForView.subject}"</DialogTitle>
-              <DialogDescription>
-                Total Questions: {selectedQuizForView.questions.length}
-              </DialogDescription>
-            </DialogHeader>
+  <Dialog open={viewingQuestions} onOpenChange={setViewingQuestions}>
+    <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
+      <DialogHeader>
+        <DialogTitle>Questions for "{selectedQuizForView.subject}"</DialogTitle>
+        <DialogDescription>
+          Total Questions: {selectedQuizForView.questions.length}
+        </DialogDescription>
+      </DialogHeader>
 
-            <div className="space-y-4">
-              {selectedQuizForView.questions.length === 0 ? (
-                <p className="text-gray-600 text-sm">No questions added yet.</p>
-              ) : (
-                selectedQuizForView.questions.map((q, index) => (
-                  <div key={q.id || index} className="border rounded-lg p-4 space-y-2">
-                    {editingQuestionId === q.id ? (
-                      <>
-                        <Input
-                          value={editForm.questionText}
-                          onChange={(e) => setEditForm({ ...editForm, questionText: e.target.value })}
-                          placeholder="Question Text"
-                        />
-                        <Input
-                          value={editForm.optionA}
-                          onChange={(e) => setEditForm({ ...editForm, optionA: e.target.value })}
-                          placeholder="Option A"
-                        />
-                        <Input
-                          value={editForm.optionB}
-                          onChange={(e) => setEditForm({ ...editForm, optionB: e.target.value })}
-                          placeholder="Option B"
-                        />
-                        <Input
-                          value={editForm.optionC}
-                          onChange={(e) => setEditForm({ ...editForm, optionC: e.target.value })}
-                          placeholder="Option C"
-                        />
-                        <Input
-                          value={editForm.optionD}
-                          onChange={(e) => setEditForm({ ...editForm, optionD: e.target.value })}
-                          placeholder="Option D"
-                        />
-                        <Select
-                          value={editForm.correctAnswer}
-                          onValueChange={(val) => setEditForm({ ...editForm, correctAnswer: val })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Correct Answer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="A">A</SelectItem>
-                            <SelectItem value="B">B</SelectItem>
-                            <SelectItem value="C">C</SelectItem>
-                            <SelectItem value="D">D</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <div className="flex gap-2 mt-2">
-                          <Button onClick={() => handleEditSave(q.id)} size="sm">Save</Button>
-                          <Button variant="outline" onClick={() => setEditingQuestionId(null)} size="sm">Cancel</Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-medium">{index + 1}. {q.questionText}</p>
-                        <ul className="list-disc ml-6 text-sm text-gray-700">
-                          <li>A: {q.optionA}</li>
-                          <li>B: {q.optionB}</li>
-                          <li>C: {q.optionC}</li>
-                          <li>D: {q.optionD}</li>
-                        </ul>
-                        <p className="text-sm text-green-600">✅ Correct Answer: {q.correctAnswer}</p>
-                        <div className="flex gap-2 mt-2">
-                          <Button
-                            onClick={() => {
-                              setEditingQuestionId(q.id);
-                              setEditForm({
-                                questionText: q.questionText,
-                                optionA: q.optionA,
-                                optionB: q.optionB,
-                                optionC: q.optionC,
-                                optionD: q.optionD,
-                                correctAnswer: q.correctAnswer,
-                              });
-                            }}
-                            variant="outline"
-                            size="sm"
-                          >
-                            Edit
-                          </Button>
-
-                          <Button
-                            onClick={() => handleDeleteQuestion(q.id)}
-                            variant="destructive"
-                            size="sm"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-
-                      </>
-                    )}
+      <div className="space-y-4">
+        {selectedQuizForView.questions.length === 0 ? (
+          <p className="text-gray-600 text-sm">No questions added yet.</p>
+        ) : (
+          selectedQuizForView.questions.map((q, index) => (
+            <div key={q.id || index} className="border rounded-lg p-4 space-y-2">
+              {editingQuestionId === q.id ? (
+                <>
+                  <div>
+                    <Label htmlFor="edit-question-text">Question Text</Label>
+                    <Input
+                      id="edit-question-text"
+                      value={editForm.questionText}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, questionText: e.target.value })
+                      }
+                      placeholder="Question Text"
+                    />
                   </div>
-                ))
 
+                  <div>
+                    <Label htmlFor="edit-option-a">Option A</Label>
+                    <Input
+                      id="edit-option-a"
+                      value={editForm.optionA}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, optionA: e.target.value })
+                      }
+                      placeholder="Option A"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-option-b">Option B</Label>
+                    <Input
+                      id="edit-option-b"
+                      value={editForm.optionB}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, optionB: e.target.value })
+                      }
+                      placeholder="Option B"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-option-c">Option C</Label>
+                    <Input
+                      id="edit-option-c"
+                      value={editForm.optionC}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, optionC: e.target.value })
+                      }
+                      placeholder="Option C"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-option-d">Option D</Label>
+                    <Input
+                      id="edit-option-d"
+                      value={editForm.optionD}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, optionD: e.target.value })
+                      }
+                      placeholder="Option D"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-correct-answer">Correct Answer</Label>
+                    <Select
+                      value={editForm.correctAnswer}
+                      onValueChange={(val) =>
+                        setEditForm({ ...editForm, correctAnswer: val })
+                      }
+                    >
+                      <SelectTrigger id="edit-correct-answer">
+                        <SelectValue placeholder="Correct Answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A">A</SelectItem>
+                        <SelectItem value="B">B</SelectItem>
+                        <SelectItem value="C">C</SelectItem>
+                        <SelectItem value="D">D</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex gap-2 mt-2">
+                    <Button onClick={() => handleEditSave(q.id)} size="sm">
+                      Save
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditingQuestionId(null)}
+                      size="sm"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium">
+                    {index + 1}. {q.questionText}
+                  </p>
+                  <ul className="list-disc ml-6 text-sm text-gray-700">
+                    <li>A: {q.optionA}</li>
+                    <li>B: {q.optionB}</li>
+                    <li>C: {q.optionC}</li>
+                    <li>D: {q.optionD}</li>
+                  </ul>
+                  <p className="text-sm text-green-600">
+                    ✅ Correct Answer: {q.correctAnswer}
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      onClick={() => {
+                        setEditingQuestionId(q.id);
+                        setEditForm({
+                          questionText: q.questionText,
+                          optionA: q.optionA,
+                          optionB: q.optionB,
+                          optionC: q.optionC,
+                          optionD: q.optionD,
+                          correctAnswer: q.correctAnswer,
+                        });
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      onClick={() => handleDeleteQuestion(q.id)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
+          ))
+        )}
+      </div>
 
-            <DialogFooter>
-              <Button onClick={() => setViewingQuestions(false)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      <DialogFooter>
+        <Button onClick={() => setViewingQuestions(false)}>Close</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+)}
+
 
     </div>
   );

@@ -84,24 +84,25 @@ const Login = () => {
 
 
       if (isAxiosError(error)) {
+        const status = error.response?.status;
         const message = error.response?.data;
+
+        let description = 'Something went wrong. Please try again.';
+
+        if (status === 404 && message === 'No user found with given username or email') {
+          description = 'No account found with that username or email.';
+        } else if (status === 401 && message === 'Incorrect password') {
+          description = 'Incorrect password. Please try again.';
+        }
+
         toast({
           title: 'Login Failed',
-          description:
-            error.response?.status === 401 && message === 'Invalid credentials'
-              ? 'Invalid username or password'
-              : 'Something went wrong. Please try again.',
-          variant: 'destructive',
-          duration: 5000,
-        });
-      } else {
-        toast({
-          title: 'Login Failed',
-          description: 'Something went wrong. Please try again.',
+          description,
           variant: 'destructive',
           duration: 5000,
         });
       }
+
     } finally {
       setLoading(false);
     }

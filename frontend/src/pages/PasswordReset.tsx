@@ -49,9 +49,11 @@ const PasswordReset = () => {
         description: 'Password reset email sent! Check your inbox.',
       });
     } catch (error: any) {
+      const message =
+    error.response?.data || error.message || 'Failed to send reset email';
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to send reset email',
+        description: message,
         variant: 'destructive',
       });
     } finally {
