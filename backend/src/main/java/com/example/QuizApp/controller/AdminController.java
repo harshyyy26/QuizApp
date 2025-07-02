@@ -8,6 +8,7 @@ import com.example.QuizApp.model.Question;
 import com.example.QuizApp.model.Quiz;
 import com.example.QuizApp.model.Role;
 import com.example.QuizApp.model.User;
+import com.example.QuizApp.repository.QuizAttemptRepository;
 import com.example.QuizApp.repository.QuizRepository;
 import com.example.QuizApp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class AdminController {
 
     private final QuizRepository quizRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -148,6 +150,7 @@ public class AdminController {
     @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable String id) {
         if (userRepository.existsById(id)) {
+            quizAttemptRepository.deleteByUserId(id);
             userRepository.deleteById(id);
             return ResponseEntity.ok("User deleted successfully.");
         } else {

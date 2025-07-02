@@ -77,30 +77,36 @@ public class AuthController {
             // Try finding by email instead
             userOptional = userRepository.findByEmail(request.getUsername());
         }
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            System.out.println("Login request for: " + request.getUsername());
-            System.out.println("User found: " + user.getUsername());
-            System.out.println("Password match: " + passwordEncoder.matches(request.getPassword(), user.getPassword()));
-            if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                // ✅ Load full UserDetails object
-                UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-                String token = jwtUtil.generateToken(userDetails);
-                UserDTO userDTO = new UserDTO(user.getId(), user.getUsername(), user.getEmail(), user.getRoles());
-                return ResponseEntity.ok(new AuthResponse(token, userDTO));
 
-            }
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No user found with given username or email");
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+
+        User user = userOptional.get();
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Incorrect password");
+        }
+
+        // ✅ Load full UserDetails object
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+        String token = jwtUtil.generateToken(userDetails);
+
+        UserDTO userDTO = new UserDTO(user.getId(), user.getUsername(), user.getEmail(), user.getRoles());
+        return ResponseEntity.ok(new AuthResponse(token, userDTO));
     }
+
 
 
     //pass reset functionality (POST /auth/request-reset?email=youruser@example.com)
     @PostMapping("/request-reset")
-    public String requestPasswordReset(@RequestParam String email) {
+    public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
-            return "No user found with this email";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No user found with this email");
         }
         // Optional: delete old tokens
         passwordResetTokenRepository.deleteByEmail(email);
@@ -115,7 +121,7 @@ public class AuthController {
         passwordResetTokenRepository.save(resetToken);
         emailService.sendPasswordResetEmail(email, token);
 
-        return "Password reset link sent to your email";
+        return ResponseEntity.ok("Password reset link sent to your email");
     }
 
     @PostMapping("/reset-password")
@@ -155,11 +161,11 @@ public class AuthController {
 
         return ResponseEntity.ok("Logged out successfully");
     }
-
-
-    @Data
-    static class AuthRequest {
-        private String username;
-        private String password;
-    }
+//
+//
+//    @Data
+//    static class AuthRequest {
+//        private String username;
+//        private String password;
+//    }
 }
