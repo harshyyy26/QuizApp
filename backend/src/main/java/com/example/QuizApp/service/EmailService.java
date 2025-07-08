@@ -40,4 +40,31 @@ public class EmailService {
             throw new RuntimeException("Failed to send email", e);
         }
     }
+
+    public void sendEmail(String toEmail, String subject, String body) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(body, false);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
+
+    public void sendOtpEmail(String toEmail, String otp) {
+        String subject = "Your OTP for QuizApp Login";
+        String body = "Your OTP is: " + otp + "\nThis OTP will expire in 5 minutes.";
+
+        sendEmail(toEmail, subject, body); // assuming you already have this method
+    }
+
+
+
+
+
 }

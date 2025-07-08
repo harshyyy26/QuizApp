@@ -2,28 +2,30 @@ package com.example.QuizApp.controller;
 
 import com.example.QuizApp.config.JwtUtil;
 import com.example.QuizApp.dto.*;
-import com.example.QuizApp.model.BlacklistedToken;
-import com.example.QuizApp.model.PasswordResetToken;
-import com.example.QuizApp.model.Role;
-import com.example.QuizApp.model.User;
+import com.example.QuizApp.model.*;
+import com.example.QuizApp.repository.OtpTokenRepository;
 import com.example.QuizApp.repository.PasswordResetTokenRepository;
 import com.example.QuizApp.repository.TokenBlacklistRepository;
 import com.example.QuizApp.repository.UserRepository;
 import com.example.QuizApp.service.EmailService;
+import com.example.QuizApp.service.UserDetailsServiceImpl;
+import com.example.QuizApp.util.OtpUtil;
 import lombok.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -40,13 +42,18 @@ public class AuthController {
     private PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired
     private EmailService emailService;
-
-    private final AuthenticationManager authManager;
-    private final JwtUtil jwtUtil;
-    private final com.example.QuizApp.service.UserDetailsServiceImpl userDetailsService;
+    @Autowired
+    private OtpTokenRepository otpTokenRepository;
 
     @Autowired
     private TokenBlacklistRepository tokenBlacklistRepository;
+    @Autowired
+    private AuthenticationManager authManager;
+    @Autowired
+    private JwtUtil jwtUtil;
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
 
     //singup functionality
     @PostMapping("/signup")
@@ -161,6 +168,78 @@ public class AuthController {
 
         return ResponseEntity.ok("Logged out successfully");
     }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<String> sendOtp(@RequestBody EmailRequest request) {
+        String email = request.getEmail();
+
+        System.out.println("OTP request received for email: " + email);
+
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No user found with this email.");
+        }
+
+        // ✅ Clear old OTPs
+        otpTokenRepository.deleteByEmail(email);
+
+        // ✅ Generate OTP
+        String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+        LocalDateTime expiry = LocalDateTime.now().plusMinutes(5);
+
+        OtpToken otpToken = OtpToken.builder()
+                .email(email)
+                .otp(otp)
+                .expiryTime(expiry)
+                .build();
+
+        otpTokenRepository.save(otpToken);
+        emailService.sendOtpEmail(email, otp); // Your email service should send this
+
+        return ResponseEntity.ok("OTP sent to your email.");
+    }
+
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody OtpVerificationRequest request) {
+        String email = request.getEmail();
+        String otp = request.getOtp();
+
+        Optional<OtpToken> tokenOpt = otpTokenRepository.findByEmail(email);
+        if (tokenOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No OTP found or expired.");
+        }
+
+        OtpToken token = tokenOpt.get();
+
+        if (!token.getOtp().equals(otp)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid OTP.");
+        }
+
+        if (token.getExpiryTime().isBefore(LocalDateTime.now())) {
+            otpTokenRepository.delete(token);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("OTP has expired.");
+        }
+
+        // ✅ Load UserDetails and generate JWT token
+        User user = userRepository.findByEmail(email).get();
+        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                user.getUsername(), user.getPassword(), user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.name()))
+                .collect(Collectors.toList())
+        );
+
+        String jwt = jwtUtil.generateToken(userDetails);
+        otpTokenRepository.delete(token); // 🔐 Delete OTP after use
+
+        UserDTO userDTO = new UserDTO(user.getId(), user.getUsername(), user.getEmail(), user.getRoles());
+        return ResponseEntity.ok(new AuthResponse(jwt, userDTO));
+    }
+
+
+
+
+
 //
 //
 //    @Data
